@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>保險年繳費率試算表</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f7f7f7;
+  }
+  .form-container, .table-container {
+    max-width: 800px;
+    margin: auto;
+  }
+  .form-container input, .form-container select {
+    padding: 8px;
+    margin: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    background-color: #fffacd; /* 淺黃色 */
+    text-align: center;
+    font-size: 16px;
+  }
+  label {
+    font-weight: bold;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+  th {
+    background-color: #fffacd; /* 淺黃色 */
+    text-align: center;
+    padding: 8px;
+  }
+  td {
+    text-align: center;
+    padding: 8px;
+  }
+  .highlight {
+    background-color: #f8d7da; /* 淺紅色 */
+  }
+  .result {
+    font-weight: bold;
+    color: red;
+    font-size: 18px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  @media (max-width: 600px) {
+    .form-container input, .form-container select {
+      font-size: 14px;
+    }
+    th, td {
+      font-size: 14px;
+      padding: 5px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="form-container">
+  <label>計畫類別</label>
+  <select id="plan" onchange="updateTable()">
+    <option value="">請選擇</option>
+    <option value="M10">M10</option>
+    <option value="M20">M20</option>
+    <option value="M30">M30</option>
+  </select>
+
+  <label>性別</label>
+  <select id="gender" onchange="updateTable()">
+    <option value="">請選擇</option>
+    <option value="male">男性</option>
+    <option value="female">女性</option>
+  </select>
+
+  <label>現在實際年紀</label>
+  <input type="number" id="currentAge" min="0" max="80" oninput="updateTable()">
+
+  <label>預計年紀</label>
+  <input type="number" id="targetAge" min="0" max="80" oninput="updateTable()">
+</div>
+
+<div class="table-container">
+  <table id="insuranceTable">
+    <thead>
+      <tr>
+        <th>保險年齡(歲)</th>
+        <th>費率</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- 資料行會由 JS 生成 -->
+    </tbody>
+  </table>
+</div>
+
+<div class="result" id="totalResult"></div>
+
+<script>
+const data = [
+  {age: "0-4", M10:{male:2360,female:2360}, M20:{male:3850,female:3850}, M30:{male:5800,female:5800}},
+  {age: "5-9", M10:{male:2010,female:2010}, M20:{male:3335,female:3335}, M30:{male:5200,female:5200}},
+  {age: "10-14", M10:{male:2285,female:2285}, M20:{male:3700,female:3700}, M30:{male:5350,female:5350}},
+  {age: "15-19", M10:{male:2375,female:2375}, M20:{male:3890,female:3890}, M30:{male:5650,female:5650}},
+  {age: "20-24", M10:{male:2400,female:2550}, M20:{male:3900,female:4000}, M30:{male:5690,female:5800}},
+  {age: "25-29", M10:{male:2440,female:2695}, M20:{male:4095,female:4200}, M30:{male:5750,female:6200}},
+  {age: "30-34", M10:{male:2575,female:5000}, M20:{male:4335,female:7955}, M30:{male:6095,female:11300}},
+  {age: "35-39", M10:{male:3780,female:5120}, M20:{male:6560,female:8230}, M30:{male:9340,female:11720}},
+  {age: "40-44", M10:{male:5160,female:5240}, M20:{male:9105,female:8515}, M30:{male:13050,female:12150}},
+  {age: "45-49", M10:{male:6270,female:5730}, M20:{male:11045,female:9350}, M30:{male:15820,female:13350}},
+  {age: "50-54", M10:{male:7600,female:6870}, M20:{male:13165,female:11060}, M30:{male:18730,female:15860}},
+  {age: "55-59", M10:{male:9040,female:7560}, M20:{male:15395,female:12070}, M30:{male:21750,female:17400}},
+  {age: "60-64", M10:{male:11400,female:9185}, M20:{male:19100,female:14930}, M30:{male:26800,female:21500}},
+  {age: "65-69", M10:{male:14685,female:12570}, M20:{male:24455,female:19570}, M30:{male:34225,female:27200}},
+  {age: "70-74", M10:{male:18010,female:16860}, M20:{male:30050,female:26110}, M30:{male:42090,female:36100}},
+  {age: "75-79", M10:{male:23090,female:21470}, M20:{male:38570,female:33455}, M30:{male:54050,female:46300}},
+  {age: "80", M10:{male:23090,female:21470}, M20:{male:38570,female:33455}, M30:{male:54050,female:46300}},
+];
+
+function updateTable() {
+  const plan = document.getElementById('plan').value;
+  const gender = document.getElementById('gender').value;
+  const currentAge = parseInt(document.getElementById('currentAge').value);
+  const targetAge = parseInt(document.getElementById('targetAge').value);
+
+  if (!plan || !gender) return;
+
+  const tbody = document.querySelector('#insuranceTable tbody');
+  tbody.innerHTML = '';
+
+  let total = 0;
+
+  data.forEach(row => {
+    const [start, end] = row.age.includes('-') ? row.age.split('-').map(Number) : [parseInt(row.age), parseInt(row.age)];
+    const fee = row[plan][gender];
+
+    const tr = document.createElement('tr');
+    const tdAge = document.createElement('td');
+    const tdFee = document.createElement('td');
+
+    tdAge.textContent = row.age;
+    tdFee.textContent = fee;
+
+    // 設定淺紅色
+    if (!isNaN(currentAge) && currentAge >= start && currentAge <= end) {
+      tdAge.classList.add('highlight');
+      tdFee.classList.add('highlight');
+    }
+    if (!isNaN(targetAge) && !isNaN(currentAge) && end >= currentAge && start <= targetAge) {
+      tdAge.classList.add('highlight');
+      tdFee.classList.add('highlight');
+    }
+
+    // 計算總額
+    if (!isNaN(currentAge) && !isNaN(targetAge)) {
+      const overlapStart = Math.max(start, currentAge);
+      const overlapEnd = Math.min(end, targetAge);
+      if (overlapStart <= overlapEnd) {
+        const years = overlapEnd - overlapStart + 1;
+        total += fee * years;
+      }
+    }
+
+    tr.appendChild(tdAge);
+    tr.appendChild(tdFee);
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('totalResult').textContent = total ? `總額：${total}` : '';
+}
+</script>
+
+</body>
+</html>
